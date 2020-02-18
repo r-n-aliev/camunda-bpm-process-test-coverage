@@ -1,5 +1,16 @@
 package org.camunda.bpm.extension.process_test_coverage.util;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.camunda.bpm.engine.ProcessEngine;
+import org.camunda.bpm.engine.repository.ProcessDefinition;
+import org.camunda.bpm.extension.process_test_coverage.junit.rules.CoverageTestRunState;
+import org.camunda.bpm.extension.process_test_coverage.model.AggregatedCoverage;
+import org.camunda.bpm.extension.process_test_coverage.model.CoveredFlowNode;
+import org.camunda.bpm.model.bpmn.Bpmn;
+import org.camunda.bpm.model.bpmn.BpmnModelInstance;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -11,20 +22,10 @@ import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.repository.ProcessDefinition;
-import org.camunda.bpm.extension.process_test_coverage.junit.rules.CoverageTestRunState;
-import org.camunda.bpm.extension.process_test_coverage.model.AggregatedCoverage;
-import org.camunda.bpm.extension.process_test_coverage.model.CoveredFlowNode;
-
 /**
  * Utility for generating graphical class and method coverage reports.
- * 
- * @author z0rbas
  *
+ * @author z0rbas
  */
 public class CoverageReportUtil {
 
@@ -41,40 +42,39 @@ public class CoverageReportUtil {
      * Generates a coverage report for the whole test class. This method
      * requires that all tests have been executed with the same resources
      * deployed.
-     * 
+     *
      * @param processEngine
      * @param coverageTestRunState
      */
     public static void createClassReport(ProcessEngine processEngine, CoverageTestRunState coverageTestRunState) {
 
-        createReport(coverageTestRunState, true);
+        createReport(coverageTestRunState, true, processEngine);
 
     }
 
     /**
      * Generates graphical test coverage reports for the current test method
      * run.
-     * 
+     *
      * @param processEngine
      * @param coverageTestRunState
      */
     public static void createCurrentTestMethodReport(ProcessEngine processEngine,
-            CoverageTestRunState coverageTestRunState) {
+                                                     CoverageTestRunState coverageTestRunState) {
 
-        createReport(coverageTestRunState, false);
+        createReport(coverageTestRunState, false, processEngine);
 
     }
 
     /**
      * Generates a coverage report.
-     * 
+     *
      * @param coverageTestRunState
-     * @param classReport
-     *            If false the current test method coverage reports are
-     *            generated. When false an aggregated class coverage report is
-     *            generated.
+     * @param classReport          If false the current test method coverage reports are
+     *                             generated. When false an aggregated class coverage report is
+     * @param processEngine
      */
-    private static void createReport(CoverageTestRunState coverageTestRunState, boolean classReport) {
+    private static void createReport(CoverageTestRunState coverageTestRunState, boolean classReport, ProcessEngine processEngine) {
 
         installBowerComponents();
 
@@ -102,7 +102,7 @@ public class CoverageReportUtil {
                         : getReportName(processDefinition, testName);
 
                 final String reportDirectory = getReportDirectoryPath(testClass);
-                final String bpmnXml = getBpmnXml(processDefinition);
+                final String bpmnXml = getBpmnXml(processDefinition, processEngine);
 
                 // Generate report
 
@@ -184,7 +184,7 @@ public class CoverageReportUtil {
 
     /**
      * Retrieves directory path for all coverage reports of a test class.
-     * 
+     *
      * @param className
      * @return
      */
@@ -196,7 +196,7 @@ public class CoverageReportUtil {
      * Retrieves the coverage report file name for the given process definition.
      * The report name prefix is set for individual test method runs and left
      * blank for aggregated (class) process coverages.
-     * 
+     *
      * @param processDefinition
      * @param reportNamePrefix
      * @return
@@ -218,14 +218,29 @@ public class CoverageReportUtil {
     }
 
     /**
+     * Retrieves a process definition BPMN XML.
+     *
+     * @param processDefinition
+     * @param processEngine
+     * @return
+     */
+    protected static String getBpmnXml(ProcessDefinition processDefinition, ProcessEngine processEngine) throws IOException {
+        if (processEngine.getRepositoryService().createDeploymentQuery().list().size() == 0) {
+            return getBpmnXml(processDefinition);
+        }
+        BpmnModelInstance modelInstance = processEngine.getRepositoryService().getBpmnModelInstance(processDefinition.getId());
+        return Bpmn.convertToString(modelInstance);
+    }
+
+    /**
      * Retrieves a process definitions BPMN XML.
-     * 
+     * UPD: Use method getBpmnXml(ProcessDefinition processDefinition, ProcessEngine processEngine) instead
+     *
      * @param processDefinition
      * @return
-     * @throws IOException
-     *             Thrown if the BPMN resource is not found.
+     * @throws IOException Thrown if the BPMN resource is not found.
      */
-    protected static String getBpmnXml(ProcessDefinition processDefinition) throws IOException {
+    private static String getBpmnXml(ProcessDefinition processDefinition) throws IOException {
 
         InputStream inputStream = CoverageReportUtil.class.getClassLoader().getResourceAsStream(
                 processDefinition.getResourceName());

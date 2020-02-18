@@ -1,16 +1,5 @@
 package org.camunda.bpm.extension.process_test_coverage.junit.rules;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.impl.bpmn.parser.BpmnParseListener;
 import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
@@ -23,7 +12,6 @@ import org.camunda.bpm.extension.process_test_coverage.listeners.FlowNodeHistory
 import org.camunda.bpm.extension.process_test_coverage.listeners.PathCoverageParseListener;
 import org.camunda.bpm.extension.process_test_coverage.model.AggregatedCoverage;
 import org.camunda.bpm.extension.process_test_coverage.model.ClassCoverage;
-import org.camunda.bpm.extension.process_test_coverage.model.CoveredElement;
 import org.camunda.bpm.extension.process_test_coverage.model.MethodCoverage;
 import org.camunda.bpm.extension.process_test_coverage.util.CoverageReportUtil;
 import org.hamcrest.Matcher;
@@ -32,20 +20,24 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.runner.Description;
 
+import java.lang.reflect.Field;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * Rule handling the process test coverage for individual test methods and the
  * whole class. Every coverage can be logged and asserted. Graphical reports can
  * be generated for individual test method runs and for the class.
- * 
+ * <p>
  * With the @Rule annotation the individual test method coverages are
  * calculated, asserted and reported. With the @ClassRule annotation the
  * individual test method coverages are summarized, asserted and reported.
- * 
+ * <p>
  * This rule cannot be used as a @ClassRule without the @Rule annotation.
- * 
+ *
  * @author grossax
  * @author z0rbas
- *
  */
 public class TestCoverageProcessEngineRule extends ProcessEngineRule {
 
@@ -92,7 +84,7 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
 
     /**
      * Adds an assertion for a test method's coverage percentage.
-     * 
+     *
      * @param testMethodName
      * @param matcher
      */
@@ -111,7 +103,7 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
 
     /**
      * Adds an assertion for the class coverage percentage.
-     * 
+     *
      * @param matcher
      */
     public void addClassCoverageAssertionMatcher(MinimalCoverageMatcher matcher) {
@@ -154,7 +146,7 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
 
     /**
      * Validates the annotation of the rule field in the test class.
-     * 
+     *
      * @param description
      */
     private void validateRuleAnnotations(Description description) {
@@ -195,19 +187,19 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
 
     /**
      * Initialize the current test method coverage.
-     * 
+     *
      * @param description
      */
     private void initializeMethodCoverage(Description description) {
 
         // Not a @ClassRule run and deployments present
         if (deploymentId != null) {
-
-            final List<ProcessDefinition> deployedProcessDefinitions = processEngine.getRepositoryService().createProcessDefinitionQuery().deploymentId(
-                deploymentId).list();
+            // process definitions, deployed at runtime (not by annotation @Deployment) will have different deploymentIDs
+            final List<ProcessDefinition> deployedProcessDefinitions =
+                    processEngine.getRepositoryService().createProcessDefinitionQuery().list(); // .deploymentId(deploymentId)
 
             final List<ProcessDefinition> relevantProcessDefinitions = new ArrayList<ProcessDefinition>();
-            for (ProcessDefinition definition: deployedProcessDefinitions) {
+            for (ProcessDefinition definition : deployedProcessDefinitions) {
                 if (!isExcluded(definition)) {
                     relevantProcessDefinitions.add(definition);
                 }
@@ -224,7 +216,7 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
     /**
      * Initialize the coverage run state depending on the rule annotations and
      * notify the state of the current test name.
-     * 
+     *
      * @param description
      */
     private void initializeRunState(final Description description) {
@@ -289,7 +281,7 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
 
     /**
      * Logs and asserts the test method coverage and creates a graphical report.
-     * 
+     *
      * @param description
      */
     private void handleTestMethodCoverage(Description description) {
@@ -327,7 +319,7 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
      * If the rule is a @ClassRule log and assert the coverage and create a
      * graphical report. For the class coverage to work all the test method
      * deployments have to be equal.
-     * 
+     *
      * @param description
      */
     private void handleClassCoverage(Description description) {
@@ -368,7 +360,7 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
 
     /**
      * Logs the string representation of the passed coverage object.
-     * 
+     *
      * @param coverage
      */
     private void logCoverageDetail(AggregatedCoverage coverage) {
@@ -398,7 +390,9 @@ public class TestCoverageProcessEngineRule extends ProcessEngineRule {
     public org.junit.runners.model.Statement apply(org.junit.runners.model.Statement base, Description description) {
         return super.apply(base, description);
 
-    };
+    }
+
+    ;
 
     @Override
     protected void succeeded(Description description) {
